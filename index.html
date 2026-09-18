@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f6f7f9">
+  <meta name="description" content="Расписание уроков 5В класса гимназии № 116. Текущий урок, перемены и расписание на каждый учебный день.">
+  <title>Расписание · 5В · Гимназия № 116</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='18' fill='%23216859'/%3E%3Ctext x='32' y='43' text-anchor='middle' font-family='sans-serif' font-size='32' font-weight='700' fill='white'%3E5В%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="./styles.css?v=active-break-label">
+  <script type="module" src="./app.js?v=preview-break"></script>
+</head>
+<body>
+  <div class="page">
+    <header class="header">
+      <div class="identity"><span class="class-mark" aria-hidden="true">5В</span><div><p class="school">Гимназия № 116</p><p class="class-name">5В класс</p></div></div>
+      <span class="clock"><span class="clock-dot" aria-hidden="true"></span><time id="clock">--:--</time><span> МСК</span></span>
+    </header>
+
+    <main>
+      <div class="intro"><p class="eyebrow">УЧЕБНАЯ НЕДЕЛЯ</p><h1>Расписание</h1><p class="subtitle">Всё по порядку. И время на перемены.</p></div>
+      <noscript><p class="notice">Чтобы видеть текущий урок и выбирать дни, включите JavaScript. <a href="./schedule.pdf" download>Скачать расписание в PDF</a>.</p></noscript>
+
+      <section id="schedule" aria-label="Расписание по дням" hidden>
+        <div class="date-navigation">
+          <button class="arrow" id="previous" type="button" aria-label="Предыдущий учебный день"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 6-6 6 6 6"/></svg></button>
+          <div class="date-heading"><div class="day-heading"><h2 id="day-name"></h2><span id="relative-day" class="day-label"></span></div><p id="full-date"></p></div>
+          <button class="arrow" id="next" type="button" aria-label="Следующий учебный день"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m10 6 6 6-6 6"/></svg></button>
+        </div>
+
+        <nav class="week" id="week" aria-label="Дни учебной недели"></nav>
+        <div class="return-row"><span id="day-summary"></span><button id="today" type="button">К сегодняшнему дню</button></div>
+        <p id="weekend-notice" class="notice" hidden></p>
+        <p id="preview-notice" class="notice" hidden>Предпросмотр перемены · время остановлено на 09:20 МСК. Уберите ?previewBreak из адреса, чтобы вернуться к реальному времени.</p>
+
+        <div id="live-status" class="live-status" role="status" aria-live="polite" aria-atomic="true">
+          <span class="status-symbol" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/></svg></span>
+          <div class="status-content"><p id="status-title"></p><span id="status-room" hidden></span><p id="status-detail"></p></div>
+        </div>
+        <ol class="lessons" id="lessons" aria-label="Уроки"></ol>
+        <div class="end-of-day"><span aria-hidden="true">✦</span><span id="end-of-day"></span></div>
+      </section>
+
+      <a class="pdf-card" href="./schedule.pdf" download="Расписание-5В.pdf">
+        <span class="pdf-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8z"/><path d="M14 3v5h5M8 13h8M8 17h5"/></svg></span>
+        <span class="pdf-copy"><strong>Вся неделя на одном листе</strong><span>Скачать PDF для печати · 27 КБ</span></span>
+        <svg class="download-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M5 17v4h14v-4"/></svg>
+      </a>
+    </main>
+    <footer><p>Время уроков — московское, МСК (UTC+3).</p><p>Обычная учебная неделя, без учёта каникул и замен.</p></footer>
+  </div>
+</body>
+</html>

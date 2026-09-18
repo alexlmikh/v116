@@ -1,0 +1,8 @@
+{
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node tests/schedule.test.mjs",
+    "render-pdf": "python3 scripts/render-schedule-pdf.py"
+  }
+}

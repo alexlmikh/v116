@@ -1,12 +1,13 @@
 # v116 school schedule
 
 The standalone static website for [v116.spb.ru](https://v116.spb.ru/), the
-Russian-language schedule for гимназия № 116, class 5В.
+Russian-language schedule for gymnasium № 116, class 5В.
 
-The browser performs all rendering and Moscow-time calculations. There are no
-runtime dependencies, external fonts, analytics, backend, or JavaScript build
-step. The files in this repository can be served directly by any static web
-server.
+The browser performs all rendering and Moscow-time calculations. 
+There are no runtime dependencies, external fonts, analytics, backend, 
+or JavaScript build step. 
+
+The files in this repository can be served directly by any static web server.
 
 ## Development
 
@@ -23,4 +24,3 @@ Google Chrome.
 
 Edit `schedule-data.js` when the timetable changes, regenerate `schedule.pdf`,
 and keep the download size in `index.html` current if the file size changes.
-

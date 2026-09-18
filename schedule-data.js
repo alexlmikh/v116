@@ -1,6 +1,3 @@
-// Checked against schedule_timetable.jpg and schedule_lessons.jpg on 2026-09-13;
-// Monday's fourth lesson was rechecked and corrected to Mathematics on 2026-09-14.
-// Rooms were transcribed from schedule_rooms.jpg on 2026-09-14.
 // Regenerate schedule.pdf with scripts/render-schedule-pdf.py after editing.
 export const SCHOOL = "Гимназия № 116 • 5В";
 

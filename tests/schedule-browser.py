@@ -223,11 +223,187 @@ with sync_playwright() as playwright:
         expect(page.locator('#preview-notice')).to_be_hidden()
         expect(page.locator('#clock')).to_have_text('20:00')
         expect(page.locator('.is-current-break')).to_have_count(0)
+    # Holidays keep their notice and effects while showing the first day after the break.
+    holiday_cases = (
+        ('2026-10-24', 'autumn', 'Осенние', '26 октября – 3 ноября 2026 · 9 дней'),
+        ('2026-10-25', 'autumn', 'Осенние', '26 октября – 3 ноября 2026 · 9 дней'),
+        ('2026-10-26', 'autumn', 'Осенние', '26 октября – 3 ноября 2026 · 9 дней'),
+        ('2026-11-03', 'autumn', 'Осенние', '26 октября – 3 ноября 2026 · 9 дней'),
+        ('2026-12-31', 'winter', 'Зимние', '31 декабря 2026 – 10 января 2027 · 11 дней'),
+        ('2027-01-10', 'winter', 'Зимние', '31 декабря 2026 – 10 января 2027 · 11 дней'),
+        ('2027-03-27', 'spring', 'Весенние', '27 марта – 4 апреля 2027 · 9 дней'),
+        ('2027-04-04', 'spring', 'Весенние', '27 марта – 4 апреля 2027 · 9 дней'),
+        ('2027-05-27', 'summer', 'Летние', '27 мая – 31 августа 2027 · 97 дней'),
+        ('2027-08-31', 'summer', 'Летние', '27 мая – 31 августа 2027 · 97 дней'),
+    )
+    for date, season, name, dates in holiday_cases:
+        page.clock.set_fixed_time(instant(f'{date}T08:45:00+03:00'))
+        page.goto(URL)
+        first_day = {'autumn': '5 ноября 2026 г.', 'winter': '11 января 2027 г.',
+                     'spring': '5 апреля 2027 г.', 'summer': '1 сентября 2027 г.'}[season]
+        expect(page.locator('#holiday-title')).to_have_text(f'{name} каникулы')
+        expect(page.locator('#holiday-detail')).to_contain_text(dates)
+        expect(page.locator('#status-title')).to_have_text('План на день')
+        expect(page.locator('#full-date')).to_have_text(first_day)
+        expect(page.locator('#relative-day')).to_have_text('После каникул')
+        expect(page.locator('#weekend-notice')).to_be_hidden()
+        expect(page.locator('#status-room')).to_be_hidden()
+        expect(page.locator('#lessons')).to_be_visible()
+        expect(page.locator('.lesson')).to_have_count(6)
+        expect(page.locator('.is-current, .is-current-break, .is-past')).to_have_count(0)
+        expect(page.locator('.end-of-day')).to_be_visible()
+        expect(page.locator('#holiday-effects')).to_have_attribute('data-season', season)
+        expect(page.locator('.season-particle')).to_have_count(12)
+        expect(page.locator('#holiday-effects')).to_have_attribute('aria-hidden', 'true')
+        assert page.locator('#holiday-effects').evaluate('el => getComputedStyle(el).pointerEvents') == 'none'
+        page.locator('#holiday-schedule summary').click()
+        expect(page.locator('#holiday-list li')).to_have_count(4)
+        expect(page.locator('#holiday-list')).to_contain_text(dates)
+        for width in (320, 390, 1440):
+            page.set_viewport_size({'width': width, 'height': 900})
+            assert page.evaluate('document.documentElement.scrollWidth <= innerWidth'), f'Holiday overflow: {season}, {width}px'
+        page.set_viewport_size({'width': 390, 'height': 844})
+        page.screenshot(path=f'/tmp/v116-holiday-{season}.png', full_page=True)
+        # Neither arrows nor weekday buttons reset the effects or remove the notice.
+        page.evaluate('window.firstParticle = document.querySelector(".season-particle")')
+        page.locator('#next').click()
+        page.locator('#week button').last.click()
+        expect(page.locator('#holiday-notice')).to_be_visible()
+        expect(page.locator('#holiday-title')).to_have_text(f'{name} каникулы')
+        expect(page.locator('#holiday-detail')).to_contain_text(dates)
+        expect(page.locator('#holiday-effects')).to_have_attribute('data-season', season)
+        assert page.evaluate('window.firstParticle === document.querySelector(".season-particle")')
+        expect(page.locator('#today')).to_have_text('К первому дню после каникул')
+        page.locator('#today').click()
+        expect(page.locator('#full-date')).to_have_text(first_day)
+
+    # A holiday weekday still offers the usual timetable, with no live tracking.
+    page.clock.set_fixed_time(instant('2027-08-31T12:00:00+03:00'))
+    page.reload()
+    page.locator('#previous').click()
+    expect(page.locator('#full-date')).to_have_text('31 августа 2027 г.')
+    expect(page.locator('#status-title')).to_have_text('Обычное расписание')
+    expect(page.locator('#status-detail')).to_contain_text('В этот день занятий нет')
+    expect(page.locator('.lesson')).to_have_count(6)
+    expect(page.locator('.is-current, .is-current-break, .is-past')).to_have_count(0)
+    expect(page.locator('#holiday-notice')).to_be_visible()
+    expect(page.locator('#holiday-effects')).to_be_visible()
+    page.locator('#today').click()
+    expect(page.locator('#full-date')).to_have_text('1 сентября 2027 г.')
+    expect(page.locator('#holiday-title')).to_have_text('Летние каникулы')
+    expect(page.locator('.season-particle').first).to_have_css('animation-play-state', 'running')
+    page.emulate_media(reduced_motion='reduce')
+    expect(page.locator('#holiday-effects')).to_be_hidden()
+    expect(page.locator('.season-particle').first).to_have_css('animation-name', 'none')
+    page.emulate_media(reduced_motion='no-preference')
+
+    # Browsing a future holiday on a teaching day does not change today's atmosphere.
+    page.clock.set_fixed_time(instant('2026-10-23T08:45:00+03:00'))
+    page.goto(URL)
+    page.locator('#next').click()
+    expect(page.locator('#status-title')).to_have_text('Обычное расписание')
+    expect(page.locator('#holiday-notice')).to_be_hidden()
+    expect(page.locator('#holiday-effects')).to_be_hidden()
+    expect(page.locator('.lesson')).to_have_count(6)
+
+    # Federal holidays and transferred days off keep their notice while browsing.
+    for date, name, next_date in (
+        ('2026-01-09', 'Перенесённый выходной за 3 января', '12 января 2026 г.'),
+        ('2026-02-23', 'День защитника Отечества', '24 февраля 2026 г.'),
+        ('2026-03-09', 'Перенесённый выходной за 8 марта', '10 марта 2026 г.'),
+        ('2026-05-01', 'Праздник Весны и Труда', '4 мая 2026 г.'),
+        ('2026-05-11', 'Перенесённый выходной за 9 мая', '12 мая 2026 г.'),
+        ('2026-06-12', 'День России', '15 июня 2026 г.'),
+        ('2026-11-04', 'День народного единства', '5 ноября 2026 г.'),
+    ):
+        page.clock.set_fixed_time(instant(f'{date}T12:00:00+03:00'))
+        page.goto(URL)
+        expect(page.locator('#holiday-title')).to_have_text(name)
+        expect(page.locator('#holiday-notice')).to_be_visible()
+        expect(page.locator('#holiday-effects')).to_be_hidden()
+        expect(page.locator('#full-date')).to_have_text(next_date)
+        expect(page.locator('#relative-day')).to_have_text('Ближайший')
+        expect(page.locator('#status-title')).to_have_text('План на день')
+        page.locator('#previous').click()
+        expect(page.locator(f'#week button[data-date="{date}"]')).to_have_attribute('aria-pressed', 'true')
+        expect(page.locator('#status-title')).to_have_text('Обычное расписание')
+        expect(page.locator('#status-detail')).to_have_text(f'{name}. В этот день занятий нет.')
+        expect(page.locator('#status-room')).to_be_hidden()
+        expect(page.locator('.end-of-day')).to_be_hidden()
+        expect(page.locator('.lesson')).to_have_count(6)
+        expect(page.locator('.is-current, .is-current-break, .is-past')).to_have_count(0)
+        expect(page.locator('#holiday-title')).to_have_text(name)
+        expect(page.locator('#today')).to_have_text('К ближайшему учебному дню')
+        page.locator('#today').click()
+        expect(page.locator('#full-date')).to_have_text(next_date)
+    page.screenshot(path='/tmp/v116-unity-day.png', full_page=True)
+
+    # A long weekend can resume on Tuesday; the notice must not promise Monday.
+    page.clock.set_fixed_time(instant('2026-03-07T12:00:00+03:00'))
+    page.goto(URL)
+    expect(page.locator('#full-date')).to_have_text('10 марта 2026 г.')
+    expect(page.locator('#weekend-notice')).to_have_text('Сегодня выходной. Показываем ближайший учебный день, 10 марта 2026 г.')
+
+    # The existing explicit break preview still works during a holiday.
+    page.clock.set_fixed_time(instant('2026-10-24T20:00:00+03:00'))
+    page.goto(urljoin(URL, '?previewBreak'))
+    expect(page.locator('#status-title')).to_have_text('Перемена · ещё 5 мин')
+    expect(page.locator('#full-date')).to_have_text('5 ноября 2026 г.')
+    expect(page.locator('#holiday-effects')).to_be_hidden()
+
+    # Cross holiday boundaries at Moscow midnight without reloading the page.
+    transitions = context.new_page()
+    transitions.on('pageerror', lambda error: errors.append(str(error)))
+    transitions.clock.install(time=instant('2026-10-23T23:59:59+03:00'))
+    transitions.clock.pause_at(instant('2026-10-23T23:59:59+03:00'))
+    transitions.goto(URL)
+    expect(transitions.locator('#status-title')).to_have_text('На сегодня всё!')
+    transitions.clock.fast_forward(1000)
+    expect(transitions.locator('#full-date')).to_have_text('5 ноября 2026 г.')
+    expect(transitions.locator('#holiday-title')).to_have_text('Осенние каникулы')
+    expect(transitions.locator('#status-title')).to_have_text('План на день')
+    expect(transitions.locator('.lesson')).to_have_count(6)
+    transitions.clock.fast_forward(24 * 60 * 60 * 1000)
+    expect(transitions.locator('#full-date')).to_have_text('5 ноября 2026 г.')
+    expect(transitions.locator('#holiday-title')).to_have_text('Осенние каникулы')
+    transitions.clock.fast_forward(10 * 24 * 60 * 60 * 1000)
+    expect(transitions.locator('#full-date')).to_have_text('5 ноября 2026 г.')
+    expect(transitions.locator('#status-title')).to_have_text('План на день')
+    expect(transitions.locator('#holiday-title')).to_have_text('День народного единства')
+    expect(transitions.locator('#holiday-effects')).to_be_hidden()
+    transitions.clock.fast_forward(24 * 60 * 60 * 1000)
+    expect(transitions.locator('#status-title')).to_have_text('Первый урок в 08:30')
+    expect(transitions.locator('#holiday-notice')).to_be_hidden()
+    expect(transitions.locator('#holiday-effects')).to_be_hidden()
+    transitions.clock.fast_forward((8 * 60 + 45) * 60 * 1000)
+    expect(transitions.locator('.is-current h3')).to_have_text('Русский язык')
+    transitions.close()
+
+    # A pinned date survives the school break -> Unity Day -> teaching day transitions.
+    pinned = context.new_page()
+    pinned.on('pageerror', lambda error: errors.append(str(error)))
+    pinned.clock.install(time=instant('2026-11-03T23:59:59+03:00'))
+    pinned.clock.pause_at(instant('2026-11-03T23:59:59+03:00'))
+    pinned.goto(URL)
+    pinned.locator('#week button[data-date="2026-11-03"]').click()
+    expect(pinned.locator('#full-date')).to_have_text('3 ноября 2026 г.')
+    expect(pinned.locator('#holiday-notice')).to_be_visible()
+    pinned.clock.fast_forward(1000)
+    expect(pinned.locator('#full-date')).to_have_text('3 ноября 2026 г.')
+    expect(pinned.locator('#holiday-title')).to_have_text('День народного единства')
+    pinned.clock.fast_forward(24 * 60 * 60 * 1000)
+    expect(pinned.locator('#holiday-notice')).to_be_hidden()
+    expect(pinned.locator('#holiday-effects')).to_be_hidden()
+    expect(pinned.locator('#status-title')).to_have_text('Обычное расписание')
+    pinned.locator('#today').click()
+    expect(pinned.locator('#full-date')).to_have_text('5 ноября 2026 г.')
+    pinned.close()
     assert not errors, errors
     context.close()
 
     desktop = browser.new_context(viewport={'width': 390, 'height': 844})
     page = desktop.new_page()
+    page.clock.set_fixed_time(instant('2026-09-11T08:45:00+03:00'))
     page.goto(URL)
     room = page.locator('.lesson-room').first
     hint = page.locator('.room-tooltip').first
@@ -258,4 +434,4 @@ with sync_playwright() as playwright:
     no_js.close()
     browser.close()
 
-print('Browser checks passed: mobile/desktop, timezone, live transitions, navigation, weekends, midnight, PDF, and no-JS fallback.')
+print('Browser checks passed: mobile/desktop, timezone, live transitions, navigation, holidays, seasonal effects, reduced motion, PDF, and no-JS fallback.')

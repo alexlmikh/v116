@@ -7,10 +7,11 @@
   <meta name="description" content="Расписание уроков 5В класса гимназии № 116. Текущий урок, перемены и расписание на каждый учебный день.">
   <title>Расписание · 5В · Гимназия № 116</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='18' fill='%23216859'/%3E%3Ctext x='32' y='43' text-anchor='middle' font-family='sans-serif' font-size='32' font-weight='700' fill='white'%3E5В%3C/text%3E%3C/svg%3E">
-  <link rel="stylesheet" href="./styles.css?v=active-break-label">
-  <script type="module" src="./app.js?v=preview-break"></script>
+  <link rel="stylesheet" href="./styles.css?v=holiday-timetable">
+  <script type="module" src="./app.js?v=public-holidays-2026"></script>
 </head>
 <body>
+  <div id="holiday-effects" aria-hidden="true" hidden></div>
   <div class="page">
     <header class="header">
       <div class="identity"><span class="class-mark" aria-hidden="true">5В</span><div><p class="school">Гимназия № 116</p><p class="class-name">5В класс</p></div></div>
@@ -22,6 +23,10 @@
       <noscript><p class="notice">Чтобы видеть текущий урок и выбирать дни, включите JavaScript. <a href="./schedule.pdf" download>Скачать расписание в PDF</a>.</p></noscript>
 
       <section id="schedule" aria-label="Расписание по дням" hidden>
+        <div id="holiday-notice" class="live-status" role="status" aria-live="polite" aria-atomic="true" hidden>
+          <span id="holiday-symbol" class="status-symbol" aria-hidden="true"></span>
+          <div class="status-content"><p id="holiday-title"></p><p id="holiday-detail"></p></div>
+        </div>
         <div class="date-navigation">
           <button class="arrow" id="previous" type="button" aria-label="Предыдущий учебный день"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 6-6 6 6 6"/></svg></button>
           <div class="date-heading"><div class="day-heading"><h2 id="day-name"></h2><span id="relative-day" class="day-label"></span></div><p id="full-date"></p></div>
@@ -34,12 +39,17 @@
         <p id="preview-notice" class="notice" hidden>Предпросмотр перемены · время остановлено на 09:20 МСК. Уберите ?previewBreak из адреса, чтобы вернуться к реальному времени.</p>
 
         <div id="live-status" class="live-status" role="status" aria-live="polite" aria-atomic="true">
-          <span class="status-symbol" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/></svg></span>
+          <span class="status-symbol" aria-hidden="true"><svg id="status-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/></svg><span id="status-holiday" hidden></span></span>
           <div class="status-content"><p id="status-title"></p><span id="status-room" hidden></span><p id="status-detail"></p></div>
         </div>
         <ol class="lessons" id="lessons" aria-label="Уроки"></ol>
         <div class="end-of-day"><span aria-hidden="true">✦</span><span id="end-of-day"></span></div>
       </section>
+
+      <details id="holiday-schedule" hidden>
+        <summary>Каникулы · 2026–2027</summary>
+        <ul id="holiday-list"></ul>
+      </details>
 
       <a class="pdf-card" href="./schedule.pdf" download="Расписание-5В.pdf">
         <span class="pdf-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8z"/><path d="M14 3v5h5M8 13h8M8 17h5"/></svg></span>
@@ -47,7 +57,7 @@
         <svg class="download-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M5 17v4h14v-4"/></svg>
       </a>
     </main>
-    <footer><p>Время уроков — московское, МСК (UTC+3).</p><p>Обычная учебная неделя, без учёта каникул и замен.</p></footer>
+    <footer><p>Время уроков — московское, МСК (UTC+3).</p><p>С учётом каникул 2026–2027. Без учёта замен.</p></footer>
   </div>
 </body>
 </html>

@@ -1,11 +1,13 @@
 import { WEEKDAYS } from './schedule-data.js';
-import { moscowNow, weekday, defaultDate, schoolDay, schoolWeek, formatDate, dayState, lessonCount } from './schedule-time.js';
+import { HOLIDAYS } from './holiday-data.js';
+import { moscowNow, weekday, defaultDate, schoolDay, schoolWeek, formatDate, dayState, lessonCount, holidayFor, holidayDates, holidayDuration, publicHolidayFor } from './schedule-time.js';
 
 const $ = id => document.getElementById(id);
 const shortDays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт'];
-// An explicit preview URL freezes the first break, including on weekends.
+// An explicit preview URL freezes the first break on the next teaching day.
+const previewDate = defaultDate(moscowNow().date);
 const previewBreakTime = new URLSearchParams(window.location.search).has('previewBreak')
-  ? new Date(`${defaultDate(moscowNow().date)}T09:20:00+03:00`)
+  ? new Date(`${previewDate}T09:20:00+03:00`)
   : null;
 const readNow = () => previewBreakTime ? moscowNow(previewBreakTime) : moscowNow();
 let now = readNow();
@@ -44,18 +46,22 @@ function renderCalendar() {
     if (button.dataset.date === now.date) button.setAttribute('aria-current', 'date');
     else button.removeAttribute('aria-current');
   }
-  const isWeekend = [0, 6].includes(weekday(now.date));
+  const currentHoliday = holidayFor(now.date);
+  const currentPublicHoliday = publicHolidayFor(now.date);
+  const isWeekend = [0, 6].includes(weekday(now.date)) && !currentHoliday && !currentPublicHoliday;
   const isToday = selected === now.date;
-  $('day-name').textContent = WEEKDAYS[weekday(selected) - 1];
+  $('day-name').textContent = ['Воскресенье', ...WEEKDAYS, 'Суббота'][weekday(selected)];
   $('full-date').textContent = formatDate(selected);
-  $('relative-day').textContent = isToday ? 'Сегодня' : isWeekend && selected === defaultDate(now.date) ? 'Ближайший' : '';
+  $('relative-day').textContent = isToday ? 'Сегодня' : selected === defaultDate(now.date)
+    ? currentHoliday ? 'После каникул' : isWeekend || currentPublicHoliday ? 'Ближайший' : '' : '';
   $('relative-day').hidden = !$('relative-day').textContent;
-  $('today').textContent = isWeekend ? 'К ближайшему понедельнику' : 'К сегодняшнему дню';
+  $('today').textContent = currentHoliday ? 'К первому дню после каникул'
+    : isWeekend || currentPublicHoliday ? 'К ближайшему учебному дню' : 'К сегодняшнему дню';
   $('today').disabled = selected === defaultDate(now.date);
   $('weekend-notice').hidden = !isWeekend;
   $('weekend-notice').textContent = selected === defaultDate(now.date)
-    ? `Сегодня выходной. Показываем ближайший понедельник, ${formatDate(selected)}`
-    : `Сегодня выходной. Ближайший учебный день — понедельник, ${formatDate(defaultDate(now.date))}`;
+    ? `Сегодня выходной. Показываем ближайший учебный день, ${formatDate(selected)}`
+    : `Сегодня выходной. Ближайший учебный день — ${formatDate(defaultDate(now.date))}`;
 }
 
 function createRoomHint(roomNumber, tooltipId) {
@@ -149,7 +155,15 @@ function renderLessons(state) {
 
 function renderStatus(state) {
   let title, detail;
-  if (state.kind === 'lesson') {
+  const isDayOff = ['holiday', 'public-holiday'].includes(state.kind);
+  if (state.kind === 'holiday') {
+    const { holiday } = state;
+    title = 'Обычное расписание';
+    detail = `${holiday.name}: ${holidayDates(holiday)}. В этот день занятий нет.`;
+  } else if (state.kind === 'public-holiday') {
+    title = 'Обычное расписание';
+    detail = `${state.publicHoliday}. В этот день занятий нет.`;
+  } else if (state.kind === 'lesson') {
     title = `Идёт ${state.current.number}-й урок`;
     detail = `До конца ${state.minutes} мин · ${state.current.name}`;
   } else if (state.kind === 'break') {
@@ -166,6 +180,10 @@ function renderStatus(state) {
     detail = `${lessonCount(state.lessons.length)} · с ${state.lessons[0].start} до ${state.lessons[state.lessons.length - 1].end}`;
   }
   $('live-status').dataset.state = state.kind;
+  $('live-status').dataset.season = state.holiday?.season || '';
+  $('status-clock').toggleAttribute('hidden', isDayOff);
+  $('status-holiday').hidden = !isDayOff;
+  $('status-holiday').textContent = state.holiday?.icon || (state.publicHoliday ? '📅' : '');
   if ($('status-title').textContent !== title) $('status-title').textContent = title;
   if ($('status-detail').textContent !== detail) $('status-detail').textContent = detail;
   const room = state.current?.room || state.next?.room || '';
@@ -178,6 +196,56 @@ function renderStatus(state) {
   }
 }
 
+function renderCurrentHoliday() {
+  const holiday = holidayFor(now.date);
+  const publicHoliday = publicHolidayFor(now.date);
+  $('holiday-notice').hidden = !holiday && !publicHoliday;
+  if (holiday || publicHoliday) {
+    $('holiday-notice').dataset.season = holiday?.season || '';
+    const title = holiday?.name || publicHoliday;
+    const dates = holiday ? `${holidayDates(holiday)} · ${holidayDuration(holiday)}` : formatDate(now.date).replace(/ г\.$/, '');
+    const detail = `${dates}. Уроков нет. Хорошего отдыха!`;
+    const icon = holiday?.icon || '📅';
+    if ($('holiday-title').textContent !== title) $('holiday-title').textContent = title;
+    if ($('holiday-detail').textContent !== detail) $('holiday-detail').textContent = detail;
+    if ($('holiday-symbol').textContent !== icon) $('holiday-symbol').textContent = icon;
+  }
+  renderHolidayEffects(holiday);
+}
+
+function renderHolidayEffects(holiday) {
+  const layer = $('holiday-effects');
+  const season = holiday?.season || '';
+  if (layer.dataset.season === season) return;
+  layer.dataset.season = season;
+  layer.hidden = !holiday;
+  const symbols = { autumn: ['🍁', '🍂'], winter: ['❄', '❅'], spring: ['✿', '❀'], summer: ['✦', '✧'] };
+  layer.replaceChildren(...(holiday ? Array.from({ length: 12 }, (_, index) => {
+    const particle = document.createElement('span');
+    particle.className = 'season-particle';
+    particle.textContent = symbols[season][index % 2];
+    particle.style.left = `${(index * 37 + 7) % 100}%`;
+    particle.style.setProperty('--duration', `${22 + index % 5 * 4}s`);
+    particle.style.setProperty('--delay', `${-index * 3}s`);
+    particle.style.setProperty('--drift', `${index % 2 ? 45 : -45}px`);
+    particle.style.fontSize = `${16 + index % 3 * 6}px`;
+    return particle;
+  }) : []));
+}
+
+function renderHolidaySchedule() {
+  $('holiday-list').replaceChildren(...HOLIDAYS.map(holiday => {
+    const item = document.createElement('li');
+    const name = document.createElement('strong');
+    name.textContent = `${holiday.icon} ${holiday.name}`;
+    const dates = document.createElement('span');
+    dates.textContent = `${holidayDates(holiday)} · ${holidayDuration(holiday)}`;
+    item.append(name, dates);
+    return item;
+  }));
+  $('holiday-schedule').hidden = false;
+}
+
 function render() {
   now = readNow();
   if (followToday) selected = defaultDate(now.date);
@@ -188,16 +256,19 @@ function render() {
   if (signature === lastSignature) return;
   lastSignature = signature;
   const state = dayState(selected, now);
+  const isDayOff = ['holiday', 'public-holiday'].includes(state.kind);
   renderCalendar();
   if (renderedDate !== selected) renderLessons(state);
   renderStatus(state);
+  renderCurrentHoliday();
   $('day-summary').textContent = `${lessonCount(state.lessons.length)} · по 45 мин`;
-  $('end-of-day').textContent = `Конец занятий в ${state.lessons[state.lessons.length - 1].end}`;
+  $('end-of-day').parentElement.hidden = isDayOff;
+  $('end-of-day').textContent = state.lessons.length ? `Конец занятий в ${state.lessons[state.lessons.length - 1].end}` : '';
   for (const [index, item] of Array.from($('lessons').children).entries()) {
     const lesson = state.lessons[index];
     const active = state.current?.number === lesson.number;
     item.classList.toggle('is-current', active);
-    item.classList.toggle('is-past', selected === now.date && now.seconds >= lesson.endSeconds);
+    item.classList.toggle('is-past', !isDayOff && selected === now.date && now.seconds >= lesson.endSeconds);
     item.querySelector('.current-badge').hidden = !active;
     if (active) item.setAttribute('aria-current', 'step');
     else item.removeAttribute('aria-current');
@@ -230,5 +301,6 @@ document.addEventListener('keydown', event => {
     for (const tooltip of document.querySelectorAll('.room-tooltip')) tooltip.hidden = true;
   }
 });
+renderHolidaySchedule();
 render();
 setInterval(render, 1000);

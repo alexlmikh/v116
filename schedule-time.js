@@ -1,6 +1,6 @@
-import { BELL_TIMES, LESSONS, ROOMS } from './schedule-data.js';
-import { HOLIDAYS } from './holiday-data.js';
-import { PUBLIC_HOLIDAYS } from './public-holiday-data.js';
+import { BELL_TIMES, LESSONS, ROOMS } from './schedule-data.js?v=2026-10-24-2';
+import { HOLIDAYS } from './holiday-data.js?v=2026-10-24-2';
+import { PUBLIC_HOLIDAYS } from './public-holiday-data.js?v=2026-10-24-2';
 
 export const TIME_ZONE = 'Europe/Moscow';
 const clock = new Intl.DateTimeFormat('en-GB', {

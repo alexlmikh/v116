@@ -44,3 +44,11 @@ year explicitly after checking its official dates and transfers.
 
 Sources: [Bank of Russia, 2026 calendar](https://www.cbr.ru/other/holidays/) and
 [Government decree No. 1466 of 24 September 2025](https://publication.pravo.gov.ru/document/0001202509240023).
+
+## Deployment and caching
+
+When changing browser assets, bump the shared `?v=` release identifier in
+`index.html` and every module import in `app.js` and `schedule-time.js` together.
+Versioning only the entry script leaves its imported modules cached independently,
+which can break returning visitors after a deployment. Upload the complete release;
+serve HTML with `Cache-Control: no-cache` so browsers revalidate the entry page.

@@ -1,6 +1,6 @@
-import { WEEKDAYS } from './schedule-data.js';
-import { HOLIDAYS } from './holiday-data.js';
-import { moscowNow, weekday, defaultDate, schoolDay, schoolWeek, formatDate, dayState, lessonCount, holidayFor, holidayDates, holidayDuration, publicHolidayFor } from './schedule-time.js';
+import { WEEKDAYS } from './schedule-data.js?v=2026-10-24-2';
+import { HOLIDAYS } from './holiday-data.js?v=2026-10-24-2';
+import { moscowNow, weekday, defaultDate, schoolDay, schoolWeek, formatDate, dayState, lessonCount, holidayFor, holidayDates, holidayDuration, publicHolidayFor } from './schedule-time.js?v=2026-10-24-2';
 
 const $ = id => document.getElementById(id);
 const shortDays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт'];

@@ -7,6 +7,7 @@ from datetime import datetime
 from pathlib import Path
 from urllib.parse import urljoin
 import hashlib
+import re
 import shutil
 import sys
 
@@ -423,6 +424,24 @@ with sync_playwright() as playwright:
         page.locator('h1').hover()
         expect(hint).to_be_hidden()
     desktop.close()
+
+    # A returning visitor may still have an older unversioned module cached.
+    cached = browser.new_context(viewport={'width': 390, 'height': 844})
+    stale_time_module = (PDF.parent / 'schedule-time.js').read_text().replace(
+        'export function holidayDates', 'function holidayDates')
+    cached.route(re.compile(r'/schedule-time\.js$'), lambda route: route.fulfill(
+        content_type='text/javascript', body=stale_time_module))
+    page = cached.new_page()
+    cache_errors = []
+    page.on('pageerror', lambda error: cache_errors.append(str(error)))
+    page.clock.set_fixed_time(instant('2026-10-24T08:45:00+03:00'))
+    page.goto(URL)
+    expect(page.locator('#schedule')).to_be_visible()
+    expect(page.locator('#holiday-title')).to_have_text('Осенние каникулы')
+    expect(page.locator('#full-date')).to_have_text('5 ноября 2026 г.')
+    expect(page.locator('.lesson')).to_have_count(6)
+    assert not cache_errors, cache_errors
+    cached.close()
 
     # PDF remains available without JavaScript.
     no_js = browser.new_context(java_script_enabled=False)
